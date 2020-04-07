@@ -1,5 +1,6 @@
 from superboucle.clip import Clip
-
+from PyQt5.QtCore import QSettings
+from superboucle.preferences import Preferences
 
 class DeviceOutput:
     def __init__(self, method, name=None):
@@ -33,41 +34,122 @@ class DeviceInput(DeviceOutput):
 
 
 class Device:
-    def __init__(self, mapping=None):
-        if mapping is None:
-            self.updateMapping({})
-        else:
-            self.updateMapping(mapping)
+    
+    NOTEON = 0x9
+    
+    def __init__(self, mapping={}):
+        self.updateMapping(mapping)
 
     def updateMapping(self, new_mapping):
         self.note_to_coord = {}
+        for key in new_mapping.keys():
+            new_mapping[key] = self._formatMapping(new_mapping[key])
         self.mapping = new_mapping
         for y in range(len(self.start_stop)):
             line = self.start_stop[y]
             for x in range(len(line)):
-                self.note_to_coord[tuple(line[x])] = (x, y)
+                self.note_to_coord[line[x]] = (x, y)
+
+    def _formatMapping(self, value):
+        if type(value) is not list or not len(value):
+            return value
+        elif type(value[0]) is int:
+            return tuple(value)
+        elif type(value[0]) is list:
+            return [self._formatMapping(v) for v in value]
+        else:
+            print("Device: Unknown structure...")
+            return value
 
     def generateNote(self, x, y, state):
         (msg_type, channel, pitch, velocity) = self.start_stop[y][x]
         return (0x90 + channel, pitch, self.getColor(state))  # note on : 0x90
 
     def getColor(self, state):
+        settings = QSettings('superboucle', 'session')  # Managing recording color
+        
         if state is None:
             return self.black_vel
+        
         elif state == Clip.STOP:
-            return self.red_vel
+            if settings.value('rec_color', Preferences.COLOR_AMBER) == Preferences.COLOR_RED:
+                return self.amber_vel
+            else:
+                return self.red_vel
+            
         elif state == Clip.STARTING:
             return self.blink_green_vel
+        
         elif state == Clip.START:
             return self.green_vel
+        
         elif state == Clip.STOPPING:
-            return self.blink_red_vel
+            if settings.value('rec_color', Preferences.COLOR_AMBER) == Preferences.COLOR_RED:
+                return self.blink_amber_vel
+            else:
+                return self.blink_red_vel
+        
         elif state == Clip.PREPARE_RECORD:
-            return self.blink_amber_vel
+            if settings.value('rec_color', Preferences.COLOR_AMBER) == Preferences.COLOR_RED:
+                return self.blink_red_vel
+            else:
+                return self.blink_amber_vel
+        
         elif state == Clip.RECORDING:
-            return self.amber_vel
+            if settings.value('rec_color', Preferences.COLOR_AMBER) == Preferences.COLOR_RED:
+                return self.red_vel
+            else:
+                return self.amber_vel
+        
         else:
             raise Exception("Invalid state")
+
+    def setAllCellsColor(self, queue_out, color):
+        # clips
+        for line in self.start_stop:
+            for data in line:
+                (m, channel, pitch, velocity) = data
+                note = ((self.NOTEON << 4) + channel, pitch, color)  
+                queue_out.put(note)
+                
+        # line blocks
+        for btn_key in self.block_buttons:
+            (msg_type, channel, pitch, velocity) = btn_key
+            note = ((self.NOTEON << 4) + channel, pitch, color)
+            queue_out.put(note)
+        
+        # scenes
+        for scene_key in self.scene_buttons:
+            (msg_type, channel, pitch, velocity) = scene_key
+            note = ((self.NOTEON << 4) + channel, pitch, color)
+            queue_out.put(note)
+        
+        #transport
+        if self.play_btn:
+            (msg_type, channel, pitch, velocity) = self.play_btn
+            note = ((self.NOTEON << 4) + channel, pitch, color)
+            queue_out.put(note)
+        
+        if self.pause_btn:
+            (msg_type, channel, pitch, velocity) = self.pause_btn
+            note = ((self.NOTEON << 4) + channel, pitch, color)
+            queue_out.put(note)
+        
+        if self.rewind_btn:
+            (msg_type, channel, pitch, velocity) = self.rewind_btn
+            note = ((self.NOTEON << 4) + channel, pitch, color)
+            queue_out.put(note)
+        
+        if self.goto_btn:
+            (msg_type, channel, pitch, velocity) = self.goto_btn
+            note = ((self.NOTEON << 4) + channel, pitch, color)
+            queue_out.put(note)
+        
+        if self.record_btn:
+            (msg_type, channel, pitch, velocity) = self.record_btn
+            note = ((self.NOTEON << 4) + channel, pitch, color)
+            queue_out.put(note)
+        
 
     def getXY(self, note):
         return self.note_to_coord[note]

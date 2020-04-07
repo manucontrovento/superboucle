@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'superboucle/cell_ui.ui'
+# Form implementation generated from reading ui file '/home/manu/Applicazioni/SuperBoucle-Manu/superboucle/cell_ui.ui'
 #
-# Created by: PyQt5 UI code generator 5.11.3
+# Created by: PyQt5 UI code generator 5.12.3
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_Cell(object):
     def setupUi(self, Cell):
@@ -38,9 +40,9 @@ class Ui_Cell(object):
         self.clip_name.setGeometry(QtCore.QRect(5, 6, 102, 20))
         font = QtGui.QFont()
         font.setFamily("Lato")
-        font.setPointSize(12)
+        font.setPointSize(10)
         font.setBold(True)
-        font.setItalic(True)
+        font.setItalic(False)
         font.setWeight(75)
         self.clip_name.setFont(font)
         self.clip_name.setText("")
@@ -53,7 +55,7 @@ class Ui_Cell(object):
         self.clip_position.setTextVisible(False)
         self.clip_position.setObjectName("clip_position")
         self.edit = QtWidgets.QPushButton(self.cell_frame)
-        self.edit.setGeometry(QtCore.QRect(20, 60, 71, 23))
+        self.edit.setGeometry(QtCore.QRect(10, 60, 91, 23))
         font = QtGui.QFont()
         font.setFamily("Lato")
         font.setPointSize(10)
@@ -63,7 +65,7 @@ class Ui_Cell(object):
         self.edit.setFont(font)
         self.edit.setObjectName("edit")
         self.start_stop = QtWidgets.QPushButton(self.cell_frame)
-        self.start_stop.setGeometry(QtCore.QRect(20, 30, 71, 23))
+        self.start_stop.setGeometry(QtCore.QRect(10, 30, 91, 23))
         font = QtGui.QFont()
         font.setFamily("Lato")
         font.setPointSize(10)
@@ -81,4 +83,3 @@ class Ui_Cell(object):
         Cell.setWindowTitle(_translate("Cell", "Form"))
         self.edit.setText(_translate("Cell", "Edit"))
         self.start_stop.setText(_translate("Cell", "Start/Stop"))
-

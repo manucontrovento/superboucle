@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'superboucle/learn_cell_ui.ui'
+# Form implementation generated from reading ui file '/home/manu/Applicazioni/SuperBoucle-Manu/superboucle/learn_cell_ui.ui'
 #
-# Created by: PyQt5 UI code generator 5.11.3
+# Created by: PyQt5 UI code generator 5.12.3
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_LearnCell(object):
     def setupUi(self, LearnCell):
@@ -43,4 +45,3 @@ class Ui_LearnCell(object):
     def retranslateUi(self, LearnCell):
         _translate = QtCore.QCoreApplication.translate
         LearnCell.setWindowTitle(_translate("LearnCell", "Form"))
-

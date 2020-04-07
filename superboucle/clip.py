@@ -7,7 +7,6 @@ from io import BytesIO, StringIO, TextIOWrapper
 from collections import OrderedDict as OrderedDict_
 import unicodedata
 
-
 class OrderedDict(OrderedDict_):
     def insert(self, key, value, index=-1):
         move_keys = list(self.keys())[index:]
@@ -56,12 +55,14 @@ class Clip():
                   STOPPING: START,
                   PREPARE_RECORD: RECORDING,
                   RECORDING: PREPARE_RECORD}
+    
     RECORD_TRANSITION = {STOP: PREPARE_RECORD,
                          PREPARE_RECORD: STOP,
                          STARTING: STOP,
                          START: STOP,
                          STOPPING: STOP,
-                         RECORDING: STOP}
+                         RECORDING: STOP}      
+    
     STATE_DESCRIPTION = {0: "STOP",
                          1: "STARTING",
                          2: "START",
@@ -71,12 +72,13 @@ class Clip():
 
     def __init__(self, audio_file=None, name='',
                  volume=1, frame_offset=0, beat_offset=0.0, beat_diviser=1,
-                 output=DEFAULT_OUTPUT, mute_group=0):
+                 output=DEFAULT_OUTPUT, mute_group=0, one_shot = False):
 
-        if name is '' and audio_file:
+        if name == '' and audio_file:
             self.name = audio_file
         else:
             self.name = name
+            
         self.volume = volume
         self.frame_offset = frame_offset
         self.beat_offset = beat_offset
@@ -86,6 +88,11 @@ class Clip():
         self.last_offset = 0
         self.output = output
         self.mute_group = mute_group
+        self.one_shot = one_shot
+        self.shot = False # When one_shot clip is shot, this becomes True
+
+#    def __setattr__(self, key, value):
+#        super().__setattr__(key, value)
 
     def stop(self):
         self.state = Clip.STOPPING if self.state == Clip.START \
@@ -93,10 +100,13 @@ class Clip():
             else self.state
 
     def start(self):
+
+        if self.one_shot == True:
+            self.shot = False
+            
         self.state = Clip.STARTING if self.state == Clip.STOP \
             else Clip.START if self.state == Clip.STOPPING \
             else self.state
-
 
 class Song():
     CHANNEL_NAMES = ["L", "R"]
@@ -121,7 +131,7 @@ class Song():
 
     def addScene(self, name):
         clip_ids = [i for i, c in enumerate(self.clips) if
-                    c.state == Clip.START]
+                    (c.state == Clip.START or c.state == Clip.STARTING)]
         self.scenes[name] = clip_ids
 
     def removeScene(self, name):
@@ -130,11 +140,11 @@ class Song():
     def getSceneDesc(self, name):
         res = [[None for y in range(self.height)]
                     for x in range(self.width)]
-        clip_ids = self.scenes[name]      
+        clip_ids = self.scenes[name]
         for i, c in enumerate(self.clips):
             res[c.x][c.y] = i in clip_ids
         return res
-        
+
     def loadScene(self, name):
         clip_ids = self.scenes[name]
         self._loadScene(clip_ids)
@@ -177,6 +187,10 @@ class Song():
             clip.state = Clip.RECORD_TRANSITION[clip.state]
         else:
             clip.state = Clip.TRANSITION[clip.state]
+            
+            if clip.one_shot == True:
+                clip.shot = False
+            
             if clip.mute_group:
                 for c in self.clips:
                     if c and c.mute_group == clip.mute_group and c != clip:
@@ -272,6 +286,7 @@ class Song():
                              'beat_diviser': str(clip.beat_diviser),
                              'output': clip.output,
                              'mute_group': str(clip.mute_group),
+                             'one_shot': str(clip.one_shot),
                              'audio_file': basename(
                                  clip.audio_file)}
                 if clip_file['audio_file'] is None:
@@ -284,7 +299,7 @@ class Song():
 
             for member in self.data:
                 buffer = BytesIO()
-                sf.write(self.data[member], buffer,
+                sf.write(buffer, self.data[member],
                          self.samplerate[member],
                          subtype=sf.default_subtype('WAV'),
                          format='WAV')
@@ -343,7 +358,8 @@ def load_song_from_file(file):
                             parser[section].getfloat('beat_offset', 0.0),
                             parser[section].getint('beat_diviser'),
                             parser[section].get('output', Clip.DEFAULT_OUTPUT),
-                            parser[section].getint('mute_group', 0))
+                            parser[section].getint('mute_group', 0),
+                            parser[section].getboolean('one_shot', False))
                 res.addClip(clip, x, y)
 
     return res

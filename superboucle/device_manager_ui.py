@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'superboucle/device_manager_ui.ui'
+# Form implementation generated from reading ui file '/home/manu/Applicazioni/SuperBoucle-Manu/superboucle/device_manager_ui.ui'
 #
-# Created by: PyQt5 UI code generator 5.11.3
+# Created by: PyQt5 UI code generator 5.12.3
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -45,4 +47,3 @@ class Ui_Dialog(object):
         self.deleteButton.setText(_translate("Dialog", "Delete"))
         self.importButton.setText(_translate("Dialog", "Import"))
         self.exportButton.setText(_translate("Dialog", "Export"))
-

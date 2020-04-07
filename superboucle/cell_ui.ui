@@ -68,9 +68,9 @@ border-radius: 10px;}</string>
     <property name="font">
      <font>
       <family>Lato</family>
-      <pointsize>12</pointsize>
+      <pointsize>10</pointsize>
       <weight>75</weight>
-      <italic>true</italic>
+      <italic>false</italic>
       <bold>true</bold>
      </font>
     </property>
@@ -103,9 +103,9 @@ border-radius: 10px;}</string>
    <widget class="QPushButton" name="edit">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>10</x>
       <y>60</y>
-      <width>71</width>
+      <width>91</width>
       <height>23</height>
      </rect>
     </property>
@@ -125,9 +125,9 @@ border-radius: 10px;}</string>
    <widget class="QPushButton" name="start_stop">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>10</x>
       <y>30</y>
-      <width>71</width>
+      <width>91</width>
       <height>23</height>
      </rect>
     </property>

@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Dialog</class>
+ <widget class="QDialog" name="Dialog">
+  <property name="windowModality">
+   <enum>Qt::NonModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>584</width>
+    <height>551</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Preferences</string>
+  </property>
+  <widget class="QGroupBox" name="groupBoxClips">
+   <property name="geometry">
+    <rect>
+     <x>9</x>
+     <y>291</y>
+     <width>566</width>
+     <height>221</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Clips</string>
+   </property>
+   <widget class="QCheckBox" name="cBoxShowDetailsWhenTriggered">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>30</y>
+      <width>341</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Show clip details when triggered on / off</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="cBoxPlayAfterRecord">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>110</y>
+      <width>331</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Start playing a clip immediately after recording</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="labelRecordingColor">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>23</x>
+      <y>145</y>
+      <width>191</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="text">
+     <string>Cell color for recording clips</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="rButtonAmberRecColor">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>210</x>
+      <y>150</y>
+      <width>351</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>AMBER for recording (RED for idle clip) (default)</string>
+    </property>
+    <property name="checked">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="rButtonRedRecColor">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>210</x>
+      <y>190</y>
+      <width>351</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>RED for recording (AMBER for idle clip)</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="cBoxShowDetailsWhenVolumeChanged">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>70</y>
+      <width>451</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Show clip details when clip volume is changed from MIDI controller</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBoxGrid">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>210</y>
+     <width>566</width>
+     <height>71</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Grid</string>
+   </property>
+   <widget class="QLabel" name="labelDefaultSize">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>27</x>
+      <y>20</y>
+      <width>201</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Default grid size for new songs</string>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spinRows">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>430</x>
+      <y>30</y>
+      <width>71</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>11</pointsize>
+     </font>
+    </property>
+    <property name="minimum">
+     <number>1</number>
+    </property>
+    <property name="maximum">
+     <number>8</number>
+    </property>
+    <property name="value">
+     <number>8</number>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spinColumns">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>30</y>
+      <width>71</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>11</pointsize>
+     </font>
+    </property>
+    <property name="minimum">
+     <number>1</number>
+    </property>
+    <property name="maximum">
+     <number>8</number>
+    </property>
+    <property name="value">
+     <number>8</number>
+    </property>
+   </widget>
+   <widget class="QLabel" name="labelHG">
+    <property name="geometry">
+     <rect>
+      <x>430</x>
+      <y>10</y>
+      <width>101</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Lines (Height)</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="labelVG">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>10</y>
+      <width>111</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Columns (Width)</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBoxConnections">
+   <property name="geometry">
+    <rect>
+     <x>9</x>
+     <y>9</y>
+     <width>561</width>
+     <height>65</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Connections</string>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QCheckBox" name="cBoxAutoconnect">
+      <property name="text">
+       <string>Autoconnect main ports on program start</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QGroupBox" name="groupBoxPerformance">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>90</y>
+     <width>566</width>
+     <height>121</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Performance</string>
+   </property>
+   <widget class="QCheckBox" name="cBoxShowScenesManager">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>40</y>
+      <width>431</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Show scenes window on start up</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="cBoxShowPlaylistManager">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>80</y>
+      <width>481</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Show playlist window on start up</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QLabel" name="labelMessage">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>520</y>
+     <width>561</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>11</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: rgb(255, 0, 0);</string>
+   </property>
+   <property name="text">
+    <string>message</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

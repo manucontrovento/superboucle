@@ -18,6 +18,8 @@ class ManageDialog(QDialog, Ui_Dialog):
         self.importButton.clicked.connect(self.onImport)
         self.exportButton.clicked.connect(self.onExport)
         self.finished.connect(self.onFinished)
+        
+        self.setModal(True)
         self.show()
 
     def onEdit(self):

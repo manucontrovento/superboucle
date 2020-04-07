@@ -3,7 +3,8 @@ from superboucle.cell_ui import Ui_Cell
 from superboucle.clip import basename, Clip
 import numpy as np
 import soundfile as sf
-
+from PyQt5.QtCore import QSettings
+from superboucle.preferences import Preferences
 
 class Cell(QWidget, Ui_Cell):
 
@@ -28,12 +29,27 @@ class Cell(QWidget, Ui_Cell):
                       "QPushButton:pressed {background-color: "
                       "rgb(98, 98, 98);}")
 
-    STATE_COLORS = {Clip.STOP: RED,
-                    Clip.STARTING: GREEN,
-                    Clip.START: GREEN,
-                    Clip.STOPPING: RED,
-                    Clip.PREPARE_RECORD: AMBER,
-                    Clip.RECORDING: AMBER}
+    # Managing recording color
+    
+    settings = QSettings('superboucle', 'session')
+    if settings.value('rec_color', Preferences.COLOR_AMBER) == Preferences.COLOR_RED:
+        
+        # RED color for recording
+        STATE_COLORS = {Clip.STOP: AMBER,
+                        Clip.STARTING: GREEN,
+                        Clip.START: GREEN,
+                        Clip.STOPPING: AMBER,
+                        Clip.PREPARE_RECORD: RED,
+                        Clip.RECORDING: RED}
+    else:
+        # default (AMBER color for recording)
+        STATE_COLORS = {Clip.STOP: RED,
+                        Clip.STARTING: GREEN,
+                        Clip.START: GREEN,
+                        Clip.STOPPING: RED,
+                        Clip.PREPARE_RECORD: AMBER,
+                        Clip.RECORDING: AMBER}
+    
     STATE_BLINK = {Clip.STOP: False,
                    Clip.STARTING: True,
                    Clip.START: False,
@@ -74,6 +90,10 @@ class Cell(QWidget, Ui_Cell):
             self.setClip(self.getClip(path))
 
     def setClip(self, new_clip):
+        
+        if not new_clip:
+            return
+        
         self.clip = new_clip
         self.clip_name.setText(new_clip.name)
         self.start_stop.clicked.connect(self.gui.onStartStopClicked)
@@ -84,6 +104,7 @@ class Cell(QWidget, Ui_Cell):
         self.clip_position.setEnabled(True)
         self.setAcceptDrops(False)
         self.gui.song.addClip(new_clip, self.pos_x, self.pos_y)
+        self.gui.last_clip = new_clip
         self.gui.update()
 
     def openClip(self):

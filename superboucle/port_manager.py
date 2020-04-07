@@ -20,6 +20,8 @@ class PortManager(QDialog, Ui_Dialog):
         self.autoconnectCBox.stateChanged.connect(self.onCheckAutoconnect)
         self.finished.connect(self.onFinished)
         self.gui.updatePorts.connect(self.updateList)
+        
+        self.setModal(True)
         self.show()
 
     def updateList(self):

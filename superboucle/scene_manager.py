@@ -4,6 +4,7 @@ from PyQt5.QtCore import QSize
 from superboucle.scene_manager_ui import Ui_Dialog
 from superboucle.add_scene import AddSceneDialog
 from superboucle.clip import load_song_from_file
+from superboucle.preferences import Preferences
 
 def getScenes(file_names):
     r = []
@@ -20,6 +21,8 @@ class SceneManager(QDialog, Ui_Dialog):
 
     def __init__(self, parent):
         super(SceneManager, self).__init__(parent)
+        self.adding_scene = False
+        self.last_item = None
         self.gui = parent
         self.setupUi(self)
         self.updateList()
@@ -33,7 +36,13 @@ class SceneManager(QDialog, Ui_Dialog):
         self.setInitialSceneBtn.clicked.connect(self.onSetInitial)
         self.gui.songLoad.connect(self.updateList)
         self.initPreview()
-        self.show()
+        self.geometry = self.gui.scenes_geometry
+ 
+        if self.geometry:
+            self.restoreGeometry(self.geometry)   
+        
+        if self.isVisible() == False:
+            self.show()
 
     def updateList(self):
         self.scenelistList.clear()
@@ -44,10 +53,21 @@ class SceneManager(QDialog, Ui_Dialog):
             if self.gui.song.initial_scene == scene:
                 item.setBackground(QColor('red'))
             self.scenelistList.addItem(item)
+            self.last_item = item
+        
+        if self.adding_scene == True:
+            # self.adding_scene = False
+            self.scenelistList.setCurrentItem(self.last_item)
+            self.updatePreview(self.last_item)            
+            
         anyScenes = bool(self.gui.song.scenes)
         self.loadScenesBtn.setEnabled(anyScenes)
         self.removeScenesBtn.setEnabled(anyScenes)
-        self.initPreview()
+        
+        if self.adding_scene == False:
+            self.initPreview()
+        else:
+            self.adding_scene = False
 
     def initPreview(self):
         self.previewcells = [[None for y in range(self.gui.song.height)]
@@ -82,8 +102,13 @@ class SceneManager(QDialog, Ui_Dialog):
         l.insert(k, v, destinationRow)
         self.updateList()
 
+    def onAddedScene(self):
+        self.adding_scene = True
+        self.updateList()
+
     def onAddScene(self):
-        AddSceneDialog(self.gui, callback=self.updateList)
+        # AddSceneDialog(self.gui, callback=self.updateList)  
+        AddSceneDialog(self.gui, callback=self.onAddedScene)
 
     def onSetInitial(self):
         item = self.scenelistList.currentItem()
@@ -101,8 +126,7 @@ class SceneManager(QDialog, Ui_Dialog):
         self.loadScene(self._getSceneName(item))
         self.gui.update()
 
-    def onCurrentItemChanged(self, item):
-
+    def updatePreview(self, item):
         if item is not None:
             scene = self.gui.song.getSceneDesc(item.data(1))
             for x in range(len(scene)):
@@ -114,10 +138,26 @@ class SceneManager(QDialog, Ui_Dialog):
                     elif line[y]:
                         cell.setStyleSheet("background-color: rgb(125,242,0);")
                     else:
-                        cell.setStyleSheet("background-color: rgb(255, 21, 65);")
+                        
+                        if self.gui.settings.value('rec_color', Preferences.COLOR_AMBER) == Preferences.COLOR_RED:
+                            cell.setStyleSheet("background-color: rgb(255, 102, 0);")
+                        else:
+                            cell.setStyleSheet("background-color: rgb(255, 21, 65);")        
+
+    def onCurrentItemChanged(self, item):
+        self.updatePreview(item)
 
     def loadScene(self, scene):
         try:
             self.gui.song.loadScene(scene)
         except:
             pass
+
+    # Saving window position
+
+    def moveEvent(self, event):
+        self.geometry = self.saveGeometry()
+        self.gui.scenes_geometry = self.geometry
+
+    def hideEvent(self, event):
+        self.gui.actionScene_Manager.setEnabled(True)        

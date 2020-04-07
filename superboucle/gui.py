@@ -14,6 +14,7 @@ from superboucle.learn import LearnDialog
 from superboucle.device_manager import ManageDialog
 from superboucle.playlist import PlaylistDialog
 from superboucle.scene_manager import SceneManager
+from superboucle.preferences import Preferences
 from superboucle.port_manager import PortManager
 from superboucle.new_song import NewSongDialog
 from superboucle.add_clip import AddClipDialog
@@ -25,12 +26,16 @@ import pickle
 from os.path import expanduser, dirname, isfile
 import numpy as np
 import soundfile as sf
+import math
+import time
 
 BAR_START_TICK = 0.0
 BEATS_PER_BAR = 4.0
 BEAT_TYPE = 4.0
 TICKS_PER_BEAT = 960.0
 
+# APP_VERSION = "1.3.0" Old type versioning
+APP_VERSION = "ver 20.04.07"
 
 class Gui(QMainWindow, Ui_MainWindow):
     NOTEON = 0x9
@@ -81,10 +86,11 @@ class Gui(QMainWindow, Ui_MainWindow):
     updatePorts = pyqtSignal()
     songLoad = pyqtSignal()
 
-    def __init__(self, song, jack_client):
+    def __init__(self, song, jack_client, app):
         QObject.__init__(self)
         super(Gui, self).__init__()
         self._jack_client = jack_client
+        self.app = app
         self.setupUi(self)
         self.clip_volume.knobRadius = 3
         self.is_learn_device_mode = False
@@ -94,19 +100,24 @@ class Gui(QMainWindow, Ui_MainWindow):
         self.current_vol_block = 0
         self.last_clip = None
 
+        # Show software version
+        self.labelVersion.setText(APP_VERSION)
+
         # Load devices
         self.deviceGroup = QActionGroup(self.menuDevice)
         self.devices = []
         device_settings = QSettings('superboucle', 'devices')
+        
         if ((device_settings.contains('devices')
              and device_settings.value('devices'))):
             for raw_device in device_settings.value('devices'):
                 self.devices.append(Device(pickle.loads(raw_device)))
         else:
             self.devices.append(Device({'name': 'No Device'}))
+            
         self.updateDevices()
         self.deviceGroup.triggered.connect(self.onDeviceSelect)
-
+        
         self.settings = QSettings('superboucle', 'session')
         # Qsetting appear to serialize empty lists as @QInvalid
         # which is then read as None :(
@@ -115,9 +126,20 @@ class Gui(QMainWindow, Ui_MainWindow):
         self.playlist = self.settings.value('playlist', []) or []
         # Load paths
         self.paths_used = self.settings.value('paths_used', {})
-
-        self.auto_connect = self.settings.value('auto_connect',
-                                                'true') == "true"
+        
+        print("Loading preferences")
+        
+        # Load preferences
+        self.auto_connect = self.settings.value('auto_connect','true') == "true"
+        self.show_clip_details_on_trigger = self.settings.value('show_clip_details_on_trigger','false') == "true"
+        self.show_clip_details_on_volume = self.settings.value('show_clip_details_on_volume','false') == "true"
+        self.play_clip_after_record = self.settings.value('play_clip_after_record','false') == "true"     
+        self.show_scenes_on_start = self.settings.value('show_scenes_on_start','false') == 'true'
+        self.show_playlist_on_start = self.settings.value('show_playlist_on_start','false') == 'true'        
+        # and windows position
+        self.playlist_geometry = self.settings.value('playlist_geometry', None)
+        self.scenes_geometry = self.settings.value('scenes_geometry', None)
+        self.gui_geometry = self.settings.value('gui_geometry', None)
 
         # Load song
         self.port_by_name = {}
@@ -127,8 +149,10 @@ class Gui(QMainWindow, Ui_MainWindow):
         self.actionOpen.triggered.connect(self.onActionOpen)
         self.actionSave.triggered.connect(self.onActionSave)
         self.actionSave_As.triggered.connect(self.onActionSaveAs)
+        self.actionQuit.triggered.connect(self.onActionQuit)
         self.actionAdd_Device.triggered.connect(self.onAddDevice)
         self.actionManage_Devices.triggered.connect(self.onManageDevice)
+        self.actionPreferences.triggered.connect(self.onPreferences)
         self.actionPlaylist_Editor.triggered.connect(self.onPlaylistEditor)
         self.actionScene_Manager.triggered.connect(self.onSceneManager)
         self.actionPort_Manager.triggered.connect(self.onPortManager)
@@ -146,6 +170,7 @@ class Gui(QMainWindow, Ui_MainWindow):
         self.beat_diviser.valueChanged.connect(self.onBeatDiviserChange)
         self.output.activated.connect(self.onOutputChange)
         self.mute_group.valueChanged.connect(self.onMuteGroupChange)
+        self.one_shot_clip.stateChanged.connect(self.onOneShotClip)
         self.frame_offset.valueChanged.connect(self.onFrameOffsetChange)
         self.beat_offset.valueChanged.connect(self.onBeatOffsetChange)
         self.revertButton.clicked.connect(self.onRevertClip)
@@ -163,9 +188,21 @@ class Gui(QMainWindow, Ui_MainWindow):
         self.disptimer.timeout.connect(self.updateProgress)
 
         self._jack_client.set_timebase_callback(self.timebase_callback)
+
+        if self.gui_geometry:
+            self.restoreGeometry(self.gui_geometry)        
+        
         self.show()
 
-    def initUI(self, song):
+        # showing additional windows if desired:
+        
+        if self.show_scenes_on_start == True:
+            self.onSceneManager()
+            
+        if self.show_playlist_on_start == True:
+            self.onPlaylistEditor()
+
+    def initUI(self, song, loading = True):
 
         # remove old buttons
         self.btn_matrix = [[None for y in range(song.height)]
@@ -183,11 +220,12 @@ class Gui(QMainWindow, Ui_MainWindow):
         # second pass with removing
         self.updateJackPorts(song, remove_ports=True)
 
-        self.frame_clip.setEnabled(False)
+        # self.frame_clip.setEnabled(False)
         self.output.clear()
         self.output.addItems(song.outputsPorts)
         self.output.addItem(Gui.ADD_PORT_LABEL)
         self.master_volume.setValue(song.volume * 256)
+        self.updateMasterVolumeValue()
         self.bpm.setValue(song.bpm)
         self.beat_per_bar.setValue(song.beat_per_bar)
         for x in range(song.width):
@@ -197,46 +235,87 @@ class Gui(QMainWindow, Ui_MainWindow):
                 self.btn_matrix[x][y] = cell
                 self.gridLayout.addWidget(cell, y, x)
 
-        # send init command
-        for init_cmd in self.device.init_command:
-            self.queue_out.put(init_cmd)
+        if loading == True:
 
-        self.setWindowTitle("Super Boucle - {}"
-                            .format(song.file_name or "Empty Song"))
-
-        if self.song.initial_scene in self.song.scenes:
-            self.song.loadScene(self.song.initial_scene)
+            # send device init command
+            for init_cmd in self.device.init_command:
+                self.queue_out.put(init_cmd)
+    
+            self.setWindowTitle("Super Boucle - {} - {}".format(APP_VERSION, song.file_name or "Empty Song"))
+            self.labelRecording.setVisible(False)
+    
+            if self.song.initial_scene in self.song.scenes:
+                self.song.loadScene(self.song.initial_scene)
+        
         self.update()
+            
         self.songLoad.emit()
 
     def openSongFromDisk(self, file_name):
         self._jack_client.transport_stop()
         self._jack_client.transport_locate(0)
 
-        self.setEnabled(False)
+        #self.setEnabled(False)
         message = QMessageBox(self)
         message.setWindowTitle("Loading ....")
         message.setText("Reading Files, please wait ...")
         message.show()
         self.initUI(load_song_from_file(file_name))
         message.close()
-        self.setEnabled(True)
+        #self.setEnabled(True)
+
+        self.redraw()
+
+    def moveEvent(self, event):
+        self.gui_geometry = self.saveGeometry()
 
     def closeEvent(self, event):
+        self.onApplicationExit()
+    
+    def onApplicationExit(self):
+        self.gui_geometry = self.saveGeometry()
+        
+        #device lights turn off, if exhisting. Prevents device from remaining lighted-up
+        try:
+            self.lightDownDevice()
+            print("device light off")
+        except:
+            print("no device connected")  # Could not turn off device lights
+        time.sleep(1)
+        # Sorry for this bad coding. But I tried in all other ways, if you don't wait a while to let
+        # the engine processal pending midi messages, the device doesn't light off.
+        
         device_settings = QSettings('superboucle', 'devices')
-        device_settings.setValue('devices',
+        device_settings.setValue('devices', 
                                  [pickle.dumps(x.mapping)
                                   for x in self.devices])
+            
         self.settings.setValue('playlist', self.playlist)
         self.settings.setValue('paths_used', self.paths_used)
+        
+        print("Saving preferences")
+        # Saving preferences
         self.settings.setValue('auto_connect', self.auto_connect)
-
+        self.settings.setValue('show_clip_details_on_trigger', self.show_clip_details_on_trigger)
+        self.settings.setValue('show_clip_details_on_volume', self.show_clip_details_on_volume)
+        self.settings.setValue('play_clip_after_record', self.play_clip_after_record)
+        self.settings.setValue('show_scenes_on_start', self.show_scenes_on_start)
+        self.settings.setValue('show_playlist_on_start', self.show_playlist_on_start)
+               
+        # and windows position
+        self.settings.setValue("gui_geometry", self.gui_geometry)
+        self.settings.setValue("scenes_geometry", self.scenes_geometry)
+        self.settings.setValue("playlist_geometry", self.playlist_geometry)
+        
+        self.settings.sync()
+        print("Preferences saved")
+              
     def onStartStopClicked(self):
         clip = self.sender().parent().parent().clip
         self.startStop(clip.x, clip.y)
 
     def startStop(self, x, y):
-        clip = self.btn_matrix[x][y].clip
+        clip = self.btn_matrix[x][y].clip # affected clip
         if clip is None:
             return
         if self.song.is_record:
@@ -254,10 +333,16 @@ class Gui(QMainWindow, Ui_MainWindow):
             self.recordButton.setStyleSheet(self.RECORD_DEFAULT)
         else:
             self.song.toggle(clip.x, clip.y)
+            
+            # to automatically view clip details, when triggered:
+            if self.show_clip_details_on_trigger:
+                self.last_clip = clip
+                self.updateClipInfo()  
+            
         self.update()
 
-    def onEdit(self):
-        self.last_clip = self.sender().parent().parent().clip
+    def updateClipInfo(self):
+        
         if self.last_clip:
             self.frame_clip.setEnabled(True)
             self.clip_name.setText(self.last_clip.name)
@@ -267,6 +352,10 @@ class Gui(QMainWindow, Ui_MainWindow):
             self.output.setCurrentText(self.last_clip.output)
             self.mute_group.setValue(self.last_clip.mute_group)
             self.clip_volume.setValue(self.last_clip.volume * 256)
+            self.updateClipVolumeValue()
+            
+            self.one_shot_clip.setChecked(self.last_clip.one_shot)
+                
             state, position = self._jack_client.transport_query()
             fps = position['frame_rate']
             bps = self.bpm.value() / 60
@@ -274,11 +363,20 @@ class Gui(QMainWindow, Ui_MainWindow):
                 size_in_beat = (bps / fps) * self.song.length(self.last_clip)
             else:
                 size_in_beat = "No BPM info"
-            clip_description = ("Size in sample : %s\nSize in beat : %s"
-                                % (self.song.length(self.last_clip),
-                                   round(size_in_beat, 1)))
+
+            # Showing file name too:
+            clip_description = ("Size in sample: %s\nSize in beat: %s\nFile name: %s"
+                % (self.song.length(self.last_clip),
+                   round(size_in_beat, 1),
+                   self.last_clip.audio_file))
 
             self.clip_description.setText(clip_description)
+            #self.clip_name.setEnabled(True)
+
+    def onEdit(self):
+        self.last_clip = self.sender().parent().parent().clip
+        
+        self.updateClipInfo()
 
     def onAddClipClicked(self):
         cell = self.sender().parent().parent()
@@ -286,6 +384,8 @@ class Gui(QMainWindow, Ui_MainWindow):
             cell.setClip(cell.openClip())
         else:
             AddClipDialog(self, cell)
+
+        self.updateClipInfo()
 
     def onRevertClip(self):
         if self.last_clip and self.last_clip.audio_file:
@@ -307,7 +407,7 @@ class Gui(QMainWindow, Ui_MainWindow):
 
             if file_name:
                 file_name = verify_ext(file_name, 'wav')
-                sf.write(self.song.data[audio_file], file_name,
+                sf.write(file_name, self.song.data[audio_file],
                          self.song.samplerate[audio_file],
                          subtype=sf.default_subtype('WAV'),
                          format='WAV')
@@ -315,16 +415,19 @@ class Gui(QMainWindow, Ui_MainWindow):
     def onDeleteClipClicked(self):
         if self.last_clip:
             response = QMessageBox.question(self,
-                                            "Delete Clip ?",
-                                            ("Are you sure "
-                                             "to delete the clip ?"))
+                                            "Delete Clip?",
+                                            ("Are you sure to delete the clip?"))
             if response == QMessageBox.Yes:
-                self.frame_clip.setEnabled(False)
+                #self.frame_clip.setEnabled(False)
                 self.song.removeClip(self.last_clip)
-                self.initUI(self.song)
+                self.initUI(self.song, False)
+
+    def updateMasterVolumeValue(self):
+        self.labelMasterVolume.setText(str(math.trunc(self.song.volume * 100)))  # showing volume numeric value
 
     def onMasterVolumeChange(self):
         self.song.volume = (self.master_volume.value() / 256)
+        self.updateMasterVolumeValue()
 
     def onBpmChange(self):
         self.song.bpm = self.bpm.value()
@@ -342,6 +445,7 @@ class Gui(QMainWindow, Ui_MainWindow):
 
     def onRecord(self):
         self.song.is_record = not self.song.is_record
+        self.labelRecording.setVisible(self.song.is_record)
         self.updateRecordBtn()
 
     def updateRecordBtn(self):
@@ -350,7 +454,10 @@ class Gui(QMainWindow, Ui_MainWindow):
         if self.device.record_btn:
             (msg_type, channel, pitch, velocity) = self.device.record_btn
             if self.song.is_record:
-                color = self.device.blink_amber_vel
+                if self.settings.value('rec_color', Preferences.COLOR_AMBER) == Preferences.COLOR_AMBER:
+                    color = self.device.blink_amber_vel
+                else:
+                    color = self.device.blink_red_vel
             else:
                 color = self.device.black_vel
             self.queue_out.put(((msg_type << 4) + channel, pitch, color))
@@ -363,8 +470,12 @@ class Gui(QMainWindow, Ui_MainWindow):
         cell = self.btn_matrix[self.last_clip.x][self.last_clip.y]
         cell.clip_name.setText(self.last_clip.name)
 
+    def updateClipVolumeValue(self):
+        self.labelClipVolume.setText(str(math.trunc(self.last_clip.volume * 100)))  # Showing numeric clip volume
+
     def onClipVolumeChange(self):
         self.last_clip.volume = (self.clip_volume.value() / 256)
+        self.updateClipVolumeValue()
 
     def onBeatDiviserChange(self):
         self.last_clip.beat_diviser = self.beat_diviser.value()
@@ -430,6 +541,9 @@ class Gui(QMainWindow, Ui_MainWindow):
 
         self.updatePorts.emit()
 
+    def onOneShotClip(self):
+        self.last_clip.one_shot = self.one_shot_clip.isChecked()
+
     def onMuteGroupChange(self):
         self.last_clip.mute_group = self.mute_group.value()
 
@@ -484,18 +598,27 @@ class Gui(QMainWindow, Ui_MainWindow):
             self.song.save()
             print("File saved to : {}".format(self.song.file_name))
 
+    def onActionQuit(self):
+        self.onApplicationExit()
+        self.app.quit()
+
     def onAddDevice(self):
         self.learn_device = LearnDialog(self, self.addDevice)
         self.is_learn_device_mode = True
+
+    def onPreferences(self):
+        Preferences(self) # Preferences Dialog
 
     def onManageDevice(self):
         ManageDialog(self)
 
     def onPlaylistEditor(self):
         PlaylistDialog(self)
+        self.actionPlaylist_Editor.setEnabled(False)
 
     def onSceneManager(self):
         SceneManager(self)
+        self.actionScene_Manager.setEnabled(False)
 
     def onPortManager(self):
         PortManager(self)
@@ -519,7 +642,7 @@ class Gui(QMainWindow, Ui_MainWindow):
                 if state != self.state_matrix[x][y]:
                     if clp:
                         self.btn_matrix[x][y].setColor(state)
-                    try:
+                    try:                                            
                         self.queue_out.put(self.device.generateNote(x,
                                                                     y,
                                                                     state))
@@ -529,6 +652,9 @@ class Gui(QMainWindow, Ui_MainWindow):
                         pass
                 self.state_matrix[x][y] = state
 
+    def lightDownDevice(self):
+        self.device.setAllCellsColor(self.queue_out, self.device.black_vel)
+        
     def redraw(self):
         self.state_matrix = [[-1 for x in range(self.song.height)]
                              for x in range(self.song.width)]
@@ -550,28 +676,53 @@ class Gui(QMainWindow, Ui_MainWindow):
 
     def processNote(self, msg_type, channel, pitch, vel):
 
-        btn_id = (msg_type,
-                  channel,
-                  pitch,
-                  vel)
+        btn_id = (msg_type, channel, pitch, vel)
         btn_id_vel = (msg_type, channel, pitch, -1)
         ctrl_key = (msg_type, channel, pitch)
 
         # master volume
         if ctrl_key == self.device.master_volume_ctrl:
-            self.song.master_volume = vel / 127
+            self.song.volume = vel / 127
+            self.updateMasterVolumeKnob()
             (self.master_volume
              .setValue(self.song.master_volume * 256))
+            
         elif self.device.play_btn in [btn_id, btn_id_vel]:
             self._jack_client.transport_start()
+            
+            (a, b_channel, b_pitch, b) = self.device.play_btn
+            note = ((a << 4) + b_channel, b_pitch, self.device.green_vel)
+            self.queue_out.put(note)
+            
+            (a, b_channel, b_pitch, b) = self.device.pause_btn
+            note = ((a << 4) + b_channel, b_pitch, self.device.black_vel)
+            self.queue_out.put(note)
+            
         elif self.device.pause_btn in [btn_id, btn_id_vel]:
             self._jack_client.transport_stop()
+            
+            (a, b_channel, b_pitch, b) = self.device.play_btn
+            note = ((a << 4) + b_channel, b_pitch, self.device.black_vel)
+            self.queue_out.put(note)
+            
+            (a, b_channel, b_pitch, b) = self.device.pause_btn
+            if self.settings.value('rec_color', Preferences.COLOR_AMBER) == Preferences.COLOR_AMBER:
+                color = self.device.red_vel
+            else:
+                color = self.device.amber_vel
+            note = ((a << 4) + b_channel, b_pitch, color)
+            self.queue_out.put(note)            
+            
         elif self.device.rewind_btn in [btn_id, btn_id_vel]:
             self.onRewindClicked()
+            
         elif self.device.goto_btn in [btn_id, btn_id_vel]:
             self.onGotoClicked()
+            
         elif self.device.record_btn in [btn_id, btn_id_vel]:
-            self.onRecord()
+            self.onRecord()   # button control color managed in: updateRecordBtn
+            
+        # volume control knobs
         elif ctrl_key in self.device.ctrls:
             try:
                 ctrl_index = self.device.ctrls.index(ctrl_key)
@@ -582,39 +733,53 @@ class Gui(QMainWindow, Ui_MainWindow):
                     clip.volume = vel / 127
                     if self.last_clip == clip:
                         self.clip_volume.setValue(self.last_clip.volume * 256)
+                    elif self.show_clip_details_on_volume:
+                        self.last_clip = clip
+                        self.updateClipInfo()   
             except KeyError:
                 pass
+            
+        # Scenes
         elif (btn_id in self.device.scene_buttons
               or btn_id_vel in self.device.scene_buttons):
             try:
                 scene_id = self.device.scene_buttons.index(btn_id)
+                self.current_scene = (self.device.scene_buttons.index(btn_id))
             except ValueError:
                 scene_id = self.device.scene_buttons.index(btn_id_vel)
+                self.current_scene = (self.device.scene_buttons.index(btn_id_vel))
 
             try:
                 self.song.loadSceneId(scene_id)
                 self.update()
+
             except IndexError:
                 print('cannot load scene {} - there are only {} scenes.'
                       ''.format(scene_id, len(self.song.scenes)))
-
+                
+            for i in range(len(self.device.scene_buttons)):
+                (a, b_channel, b_pitch, b) = self.device.scene_buttons[i]
+                if i == self.current_scene:  
+                    color = self.device.green_vel 
+                else:
+                    color = self.device.black_vel
+                self.queue_out.put(((self.NOTEON << 4) + b_channel, b_pitch, color))            
+        
+        # Line blocks 
         elif (btn_id in self.device.block_buttons
               or btn_id_vel in self.device.block_buttons):
             try:
-                self.current_vol_block = (
-                    self.device.block_buttons.index(btn_id))
+                self.current_vol_block = (self.device.block_buttons.index(btn_id))
             except ValueError:
-                self.current_vol_block = (
-                    self.device.block_buttons.index(btn_id_vel))
+                self.current_vol_block = (self.device.block_buttons.index(btn_id_vel))
+                
             for i in range(len(self.device.block_buttons)):
                 (a, b_channel, b_pitch, b) = self.device.block_buttons[i]
                 if i == self.current_vol_block:
-                    color = self.device.red_vel
+                    color = self.device.green_vel                                
                 else:
                     color = self.device.black_vel
-                self.queue_out.put(((self.NOTEON << 4) + b_channel,
-                                    b_pitch,
-                                    color))
+                self.queue_out.put(((self.NOTEON << 4) + b_channel, b_pitch, color))
         else:
             x, y = -1, -1
             try:

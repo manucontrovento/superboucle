@@ -9,20 +9,25 @@ from superboucle.gui import Gui
 from PyQt5.QtWidgets import QApplication
 from queue import Empty
 import argparse
-
+from PyQt5.QtCore import QSettings
 
 parser = argparse.ArgumentParser(description='launch superboucle')
 parser.add_argument("songfile", nargs="?", help="load the song specified here")
 args = parser.parse_args()
 
 song = None
+settings = QSettings('superboucle', 'session')
 if args.songfile:
     if os.path.isfile(args.songfile):
         song = load_song_from_file(args.songfile)
     else:
         sys.exit("File {} does not exist.".format(args.songfile))
 else:
-    song = Song(8, 8)
+
+    # song = Song(8, 8)
+    # reading preferred grid size
+    song = Song(int(settings.value('grid_columns', 8)), 
+                int(settings.value('grid_rows', 8)))
 
 client = jack.Client("Super Boucle")
 midi_in = client.midi_inports.register("input")
@@ -31,12 +36,21 @@ inL = client.inports.register("input_L")
 inR = client.inports.register("input_R")
 
 app = QApplication(sys.argv)
-gui = Gui(song, client)
+gui = Gui(song, client, app)
 
-CLIP_TRANSITION = {Clip.STARTING: Clip.START,
-                   Clip.STOPPING: Clip.STOP,
-                   Clip.PREPARE_RECORD: Clip.RECORDING,
-                   Clip.RECORDING: Clip.STOP}
+# option to start playing the clip just after recording:
+if settings.value('play_clip_after_record', False) == False:
+
+    CLIP_TRANSITION = {Clip.STARTING: Clip.START,
+                       Clip.STOPPING: Clip.STOP,
+                       Clip.PREPARE_RECORD: Clip.RECORDING,
+                       Clip.RECORDING: Clip.STOP}
+else:
+    
+    CLIP_TRANSITION = {Clip.STARTING: Clip.START,
+                       Clip.STOPPING: Clip.STOP,
+                       Clip.PREPARE_RECORD: Clip.RECORDING,
+                       Clip.RECORDING: Clip.START}        
 
 
 def my_callback(frames):
@@ -80,14 +94,11 @@ def my_callback(frames):
                             for base in Song.CHANNEL_NAMES]
 
             frame_per_beat = fpm / bpm
-            clip_period = (
-                              fpm * clip.beat_diviser) / bpm  # length of the clip in frames
-            total_frame_offset = clip.frame_offset + (
-                clip.beat_offset * frame_per_beat)
-            # frame_beat: how many times the clip hast been played already
+            clip_period = (fpm * clip.beat_diviser) / bpm  # length of the clip in frames
+            total_frame_offset = clip.frame_offset + (clip.beat_offset * frame_per_beat)
+            # frame_beat: how many times the clip has been played already
             # clip_offset: position in the clip about to be played
-            frame_beat, clip_offset = divmod(
-                (frame - total_frame_offset) * bpm, fpm * clip.beat_diviser)
+            frame_beat, clip_offset = divmod((frame - total_frame_offset) * bpm, fpm * clip.beat_diviser)
             clip_offset = round(clip_offset / bpm)
 
             # next beat is in block ?
@@ -97,6 +108,10 @@ def my_callback(frames):
                 # print("new beat in block : {}".format(next_clip_offset))
             else:
                 next_clip_offset = None
+            
+                if clip.state == clip.START and clip.one_shot == True and clip.shot == False:
+                    clip.shot = True
+                    clip.state = Clip.STOPPING
 
             if clip.state == Clip.START or clip.state == Clip.STOPPING:
                 # is there enough audio data ?
@@ -163,6 +178,7 @@ def my_callback(frames):
 
             # starting or stopping clip
             if clip_offset == 0 or next_clip_offset:
+       
                 try:
                     # reset record offset
                     if clip.state == Clip.RECORDING:
@@ -205,11 +221,19 @@ def start():
             raise RuntimeError("No physical record ports")
 
         my_format = Song.CHANNEL_NAME_PATTERN.format
+        
+        # QUI TRY-CATCH
+        
         if gui.auto_connect:
+            
             # connect inputs
-            client.connect(record[0], inL)
-            client.connect(record[1], inR)
-
+            try:
+                client.connect(record[0], inL)
+                client.connect(record[1], inR)
+            except:
+                raise RuntimeError("Error connecting input ports. Check JACK Settings")
+            
+            
             # connect outputs
             for ch_name, pl_port in zip([my_format(port=Clip.DEFAULT_OUTPUT,
                                                    channel=ch)
@@ -219,7 +243,6 @@ def start():
                 client.connect(sb_out, pl_port)
 
         app.exec_()
-
 
 if __name__ == "__main__":
     start()

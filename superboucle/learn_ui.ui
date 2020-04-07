@@ -58,7 +58,7 @@
         <x>10</x>
         <y>10</y>
         <width>351</width>
-        <height>35</height>
+        <height>36</height>
        </rect>
       </property>
       <layout class="QFormLayout" name="formLayout">
@@ -421,7 +421,7 @@
          <x>10</x>
          <y>30</y>
          <width>351</width>
-         <height>31</height>
+         <height>32</height>
         </rect>
        </property>
        <layout class="QFormLayout" name="formLayout_2">
@@ -615,8 +615,8 @@
         <rect>
          <x>10</x>
          <y>30</y>
-         <width>139</width>
-         <height>31</height>
+         <width>143</width>
+         <height>32</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
@@ -659,8 +659,8 @@
         <rect>
          <x>10</x>
          <y>30</y>
-         <width>139</width>
-         <height>31</height>
+         <width>143</width>
+         <height>32</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_8">
@@ -703,8 +703,8 @@
         <rect>
          <x>10</x>
          <y>30</y>
-         <width>139</width>
-         <height>31</height>
+         <width>143</width>
+         <height>32</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_3">
@@ -747,8 +747,8 @@
         <rect>
          <x>10</x>
          <y>30</y>
-         <width>139</width>
-         <height>31</height>
+         <width>143</width>
+         <height>32</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_4">
@@ -791,13 +791,12 @@
         <rect>
          <x>160</x>
          <y>30</y>
-         <width>191</width>
-         <height>101</height>
+         <width>201</width>
+         <height>121</height>
         </rect>
        </property>
        <property name="text">
-        <string>Init commands must be entered as 3 decimal values separated by comma and one command per line.
-example:
+        <string>Init commands as 3 decimal values separated by comma. One command per line. Ex:
 176, 0, 0
 176, 0, 40</string>
        </property>
@@ -856,8 +855,8 @@ example:
         <rect>
          <x>10</x>
          <y>30</y>
-         <width>139</width>
-         <height>31</height>
+         <width>143</width>
+         <height>32</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_5">
@@ -900,8 +899,8 @@ example:
         <rect>
          <x>10</x>
          <y>30</y>
-         <width>139</width>
-         <height>31</height>
+         <width>143</width>
+         <height>32</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_11">
@@ -944,8 +943,8 @@ example:
         <rect>
          <x>10</x>
          <y>30</y>
-         <width>139</width>
-         <height>31</height>
+         <width>143</width>
+         <height>32</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_12">

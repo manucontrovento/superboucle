@@ -46,7 +46,7 @@
        <item>
         <widget class="QPushButton" name="loadScenesBtn">
          <property name="text">
-          <string>Load Scene</string>
+          <string>Start Scene</string>
          </property>
         </widget>
        </item>

@@ -44,6 +44,10 @@ class AddClipDialog(QDialog, Ui_Dialog):
         elif self.type == 'empty':
             new_clip = Clip(audio_file=None,
                             name='audio-%02d' % len(self.gui.song.clips))
-
+            
         if new_clip:
+            # Reading loops amount from the new clip dialog. Usually 0 ( = infinite)
+            new_clip.one_shot = self.cBoxOneShotClip.isChecked()
+            new_clip.beat_diviser = self.gui.song.beat_per_bar
             self.cell.setClip(new_clip)
+            

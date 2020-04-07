@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'superboucle/scene_manager_ui.ui'
+# Form implementation generated from reading ui file '/home/manu/Applicazioni/SuperBoucle-Manu/superboucle/scene_manager_ui.ui'
 #
-# Created by: PyQt5 UI code generator 5.11.3
+# Created by: PyQt5 UI code generator 5.12.3
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -53,8 +55,7 @@ class Ui_Dialog(object):
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "Scene Manager"))
-        self.loadScenesBtn.setText(_translate("Dialog", "Load Scene"))
+        self.loadScenesBtn.setText(_translate("Dialog", "Start Scene"))
         self.addScenesBtn.setText(_translate("Dialog", "Add Scene"))
         self.removeScenesBtn.setText(_translate("Dialog", "Remove Scene"))
         self.setInitialSceneBtn.setText(_translate("Dialog", "Set initial Scene"))
-

@@ -174,6 +174,8 @@ class LearnDialog(QDialog, Ui_Dialog):
         self.blink_red_vel.valueChanged.connect(self.onBlinkRed)
         self.amber_vel.valueChanged.connect(self.onAmber)
         self.blink_amber_vel.valueChanged.connect(self.onBlinkAmber)
+        
+        self.setModal(True)
         self.show()
 
     def onFirstLineClicked(self):
@@ -255,15 +257,7 @@ class LearnDialog(QDialog, Ui_Dialog):
         self.lightAllCell(self.blink_amber_vel.value())
 
     def lightAllCell(self, color):
-        for line in self.device.start_stop:
-            for data in line:
-                (m, channel, pitch, v) = data
-                note = ((self.NOTEON << 4) + channel, pitch, color)
-                self.gui.queue_out.put(note)
-        for btn_key in self.device.block_buttons:
-            (msg_type, channel, pitch, velocity) = btn_key
-            note = ((self.NOTEON << 4) + channel, pitch, color)
-            self.gui.queue_out.put(note)
+        self.device.setAllCellsColor(self.gui.queue_out, color)
 
     def update(self):
         try:
@@ -303,24 +297,28 @@ class LearnDialog(QDialog, Ui_Dialog):
                 self.knownBtn.add(btn_key)
                 self.device.play_btn = btn_id
                 self.playLabel.setText(self.displayCtrl(ctrl_key))
+                
             elif self.send_midi_to == self.PAUSE_BTN:
                 self.send_midi_to = None
                 self.knownCtrl.add(ctrl_key)
                 self.knownBtn.add(btn_key)
                 self.device.pause_btn = btn_id
                 self.pauseLabel.setText(self.displayCtrl(ctrl_key))
+                
             elif self.send_midi_to == self.REWIND_BTN:
                 self.send_midi_to = None
                 self.knownCtrl.add(ctrl_key)
                 self.knownBtn.add(btn_key)
                 self.device.rewind_btn = btn_id
                 self.rewindLabel.setText(self.displayCtrl(ctrl_key))
+                
             elif self.send_midi_to == self.GOTO_BTN:
                 self.send_midi_to = None
                 self.knownCtrl.add(ctrl_key)
                 self.knownBtn.add(btn_key)
                 self.device.goto_btn = btn_id
                 self.gotoLabel.setText(self.displayCtrl(ctrl_key))
+                
             elif self.send_midi_to == self.RECORD_BTN:
                 self.send_midi_to = None
                 self.knownCtrl.add(ctrl_key)

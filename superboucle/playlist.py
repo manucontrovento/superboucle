@@ -1,11 +1,15 @@
 from PyQt5.QtWidgets import QDialog, QFileDialog, QAbstractItemView
 from superboucle.playlist_ui import Ui_Dialog
-from superboucle.clip import load_song_from_file, verify_ext
+from superboucle.clip import verify_ext
+#from superboucle.clip import load_song_from_file, verify_ext
 import json
 from os.path import basename, splitext
 
 
 class PlaylistDialog(QDialog, Ui_Dialog):
+    
+    current_song_id = None
+    
     def __init__(self, parent):
         super(PlaylistDialog, self).__init__(parent)
         self.gui = parent
@@ -19,8 +23,15 @@ class PlaylistDialog(QDialog, Ui_Dialog):
         self.playlistList.itemDoubleClicked.connect(self.onSongDoubleClick)
         self.playlistList.setDragDropMode(QAbstractItemView.InternalMove)
         self.playlistList.model().rowsMoved.connect(self.onMoveRows)
-        self.show()
-
+        
+        self.geometry = self.gui.playlist_geometry
+        
+        if self.geometry:
+            self.restoreGeometry(self.geometry)    
+        
+        if self.isVisible() == False:
+            self.show()
+        
     def updateList(self):
         self.playlistList.clear()
         for i, song in enumerate(self.gui.playlist):
@@ -85,5 +96,23 @@ class PlaylistDialog(QDialog, Ui_Dialog):
         file_name = self.gui.playlist[id]
         try:
             self.gui.openSongFromDisk(file_name)
+            # self.current_song_id = id
         except Exception as e:
             print("could not load File {}.\nError: {}".format(file_name, e))
+    
+#    def loadNextSong(self):
+#        self.playlistList.SelectRows(self.playlistList.currentRow() + 1)
+#        self.loadSongBtn.click()
+#        
+#    def loadPreviousSong(self):
+#        self.playlistList.SelectRows(self.playlistList.currentRow() - 1)
+#        self.loadSongBtn.click()
+        
+    # saving window position
+        
+    def moveEvent(self, event):
+        self.geometry = self.saveGeometry()
+        self.gui.playlist_geometry = self.geometry
+    
+    def hideEvent(self, event):
+        self.gui.actionPlaylist_Editor.setEnabled(True)
