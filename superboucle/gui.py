@@ -268,7 +268,7 @@ class Gui(QMainWindow, Ui_MainWindow):
         # second pass with removing
         self.output.clear()
         self.output.addItems(common.toPortsList(settings.output_ports))
-        self.song_volume_knob.setValue(common.toControllerVolumeValue(new_song.volume))
+        self.song_volume_knob.setValue(int(common.toControllerVolumeValue(new_song.volume)))
         self.updateSongVolumeValue()
         self.bpm.setValue(new_song.bpm)
         self.beat_per_bar.setValue(new_song.beat_per_bar)
